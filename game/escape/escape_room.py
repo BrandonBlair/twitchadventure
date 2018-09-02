@@ -1,5 +1,8 @@
-class AdventureGame(object):
-    name = "Generic Game"
+from time import time
+
+
+class EscapeRoom(object):
+    name = "Escape Room"
 
     def __init__(self):
         self.header = f"*** {self.name} ***"
@@ -35,6 +38,10 @@ class Step(object):
     solution_set = {}
     success_msg = "You solved the step!"
     desc = "A generic step"
+    basic_search = "You haven't been here long enough to notice much."
+    intermediate_search = "You've been here long enough to notice some things."
+    advanced_search = "You notice some significant clues."
+    god_search = "The world is laid bare before your all-knowing gaze..."
 
     def __init__(self):
         self.solved = False

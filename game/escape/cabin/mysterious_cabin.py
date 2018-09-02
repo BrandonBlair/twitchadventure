@@ -1,7 +1,7 @@
-from game.adventure_game import AdventureGame, Step
+from game.escape.escape_room import EscapeRoom, Step
 
 
-class CabinMystery(AdventureGame):
+class CabinMystery(EscapeRoom):
 
     name = "The Mysterious Cabin"
 
@@ -11,11 +11,12 @@ class CabinMystery(AdventureGame):
             CarInterior(),
             CarExterior(),
         ]
+        self.inventory = []
 
 
 class CarInterior(Step):
     solution_set = {'unlock', 'door'}
-    success_msg = "Nice job, figuring out you need to unlock a door to walk through it."
+    success_msg = "You "
     desc = (
         "You wake up in the driver seat of a car. "
         "It is raining steadily and very dark outside. "
