@@ -9,11 +9,20 @@ import sys
 import irc.bot
 import requests
 import random
-from time import time
+from time import time, sleep
 
 from game.escape.cabin.mysterious_cabin import CabinMystery
 from game.adventure.campaigns.deep_dungeon import DeepDungeon
 from game.adventure.races import races
+
+class Console(object):
+    def __init__(self, connection, channel):
+        self.connection = connection
+        self.channel = channel
+
+    def chat(self, txt, wait_secs=1):
+        self.connection.privmsg(self.channel, txt)
+        sleep(wait_secs)
 
 class TwitchBot(irc.bot.SingleServerIRCBot):
     def __init__(self, username, client_id, token, channel):
@@ -21,7 +30,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         self.token = token
         self.channel = '#' + channel
         self.mystery = CabinMystery()
-        self.adventure = DeepDungeon()
+
 
         # Get the channel id, we will need this for v5 API calls
         url = 'https://api.twitch.tv/kraken/users?login=' + channel
@@ -35,6 +44,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
         print('Connecting to ' + server + ' on port ' + str(port) + '...')
         irc.bot.SingleServerIRCBot.__init__(self, [(server, port, 'oauth:'+token)], username, username)
 
+        self.console = Console(connection=self.connection, channel=self.channel)
+        self.adventure = DeepDungeon(self.console)
 
     def on_welcome(self, c, e):
         print('Joining ' + self.channel)
@@ -56,6 +67,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
 
     def do_command(self, e, cmd):
         c = self.connection
+
         print("command recvd:", cmd)
         cmd_tokens = cmd.lower().split(' ')
 
@@ -86,28 +98,83 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 message = self.mystery.attempt(cmd[8:])  # Ignore mystery command and space
             c.privmsg(self.channel, message)
 
-        elif cmd_tokens[0] == "adventure":
+        elif cmd_tokens[0] == "rp":
             print("Length of cmd tokens {}".format(len(cmd_tokens)))
             twitch_user = e.source.split('@')[0].split('!')[1]  # Derive user from myname!myname@twitch.tmi.com
             if twitch_user in self.adventure.adventurers:
                 pass
             else:
                 race = random.choice(races)
-                self.adventure.add_character(name=twitch_user, race=race)
+                self.adventure.add_character(console=self.console, name=twitch_user, race=race)
                 msg = f"{twitch_user} has joined the adventure! They will be playing {twitch_user} the {race}"
                 c.privmsg(self.channel, msg)
+            player = self.adventure.adventurers.get(twitch_user)
+            if not player.alive:
+                self.console.chat(f"{player.name} is dead.")
+                return None
             if len(cmd_tokens) == 1:
-                message = self.adventure.current_room.full_desc
-
+                self.console.chat(self.adventure.current_room.full_desc)
             elif cmd_tokens[1] == "inventory":
-                message = ', '.join(self.adventure.inventory)
-            elif cmd_tokens[1] == "search":
-                player = self.adventure.adventurers.get(twitch_user)
+                inv = player.show_inventory()
+                if not inv:
+                    self.console.chat(f"{player.name} has nothing in their inventory.")
+                    return None
+                self.console.chat(f"{player.name} is carrying {inv}")
+            elif cmd_tokens[1] in ['search', 'look', 'investigate']:
                 search_msg = self.adventure.current_room.search(player)
-                message = search_msg
-            else:
-                message = self.mystery.attempt(cmd[8:])  # Ignore mystery command and space
-            c.privmsg(self.channel, message)
+                self.console.chat(search_msg)
+            elif cmd_tokens[1] in ["attack", 'kill', 'assault']:
+                if len(cmd_tokens) < 3:
+                    self.console.chat(f"{player.name} please specify a target to attack.")
+                    return None
+                trg_name = ' '.join(cmd_tokens[2:])
+                try:
+                    self.adventure.current_room.attack(self.console, player, trg_name)
+                except Exception as e:
+                    self.console.chat(str(e))
+            elif cmd_tokens[1] in ['get', 'take', 'retrieve', 'grab']:
+                if len(cmd_tokens) < 3:
+                    self.console.chat(f"{player.name} please specify what you want to take.")
+                    return None
+                trg_name = ' '.join(cmd_tokens[2:])
+                try:
+                    self.adventure.current_room.take(self.console, player, trg_name)
+                except Exception as e:
+                    self.console.chat(str(e))
+            elif cmd_tokens[1] in ['drop', 'discard', 'trash']:
+                if len(cmd_tokens) < 3:
+                    self.console.chat(f"{player.name} please specify what you want to drop.")
+                    return None
+                trg_name = ' '.join(cmd_tokens[2:])
+                try:
+                    self.adventure.current_room.drop(self.console, player, trg_name)
+                except Exception as e:
+                    self.console.chat(str(e))
+            elif cmd_tokens[1] in ['equip', 'use']:
+                if len(cmd_tokens) < 3:
+                    self.console.chat(f"{player.name} please specify what you want to equip.")
+                    return None
+                trg_name = ' '.join(cmd_tokens[2:])
+                try:
+                    player.equip_item(trg_name)
+                except Exception as e:
+                    self.console.chat(str(e))
+            elif cmd_tokens[1] in ['unequip']:
+                if len(cmd_tokens) < 3:
+                    self.console.chat(f"{player.name} please specify what you want to unequip.")
+                    return None
+                trg_name = ' '.join(cmd_tokens[2:])
+                try:
+                    player.unequip_item(trg_name)
+                except Exception as e:
+                    self.console.chat(str(e))
+            elif cmd_tokens[1] in ['help', 'commands', 'controls', 'manual']:
+                self.console.chat(
+                    'Commands include: inventory, search, take, equip, unequip, drop, attack'
+                )
+            return None
+
+
 
         elif cmd == "schedule":
             message = "This is an example bot, replace this text with your schedule text."
