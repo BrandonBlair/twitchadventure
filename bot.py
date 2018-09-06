@@ -20,7 +20,7 @@ class Console(object):
         self.connection = connection
         self.channel = channel
 
-    def chat(self, txt, wait_secs=1):
+    def chat(self, txt, wait_secs=2.5):
         self.connection.privmsg(self.channel, txt)
         sleep(wait_secs)
 
@@ -105,7 +105,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                 pass
             else:
                 race = random.choice(races)
-                self.adventure.add_character(console=self.console, name=twitch_user, race=race)
+                self.adventure.add_character(name=twitch_user, race=race)
                 msg = f"{twitch_user} has joined the adventure! They will be playing {twitch_user} the {race}"
                 c.privmsg(self.channel, msg)
             player = self.adventure.adventurers.get(twitch_user)
@@ -121,15 +121,19 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     return None
                 self.console.chat(f"{player.name} is carrying {inv}")
             elif cmd_tokens[1] in ['search', 'look', 'investigate']:
-                search_msg = self.adventure.current_room.search(player)
-                self.console.chat(search_msg)
+                self.adventure.current_room.search(player)
+                return None
             elif cmd_tokens[1] in ["attack", 'kill', 'assault']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify a target to attack.")
                     return None
                 trg_name = ' '.join(cmd_tokens[2:])
                 try:
-                    self.adventure.current_room.attack(self.console, player, trg_name)
+                    self.adventure.current_room.attack(
+                        player=player,
+                        attacker=player,
+                        target=trg_name
+                    )
                 except Exception as e:
                     self.console.chat(str(e))
             elif cmd_tokens[1] in ['get', 'take', 'retrieve', 'grab']:
@@ -138,7 +142,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     return None
                 trg_name = ' '.join(cmd_tokens[2:])
                 try:
-                    self.adventure.current_room.take(self.console, player, trg_name)
+                    self.adventure.current_room.take(player, trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
             elif cmd_tokens[1] in ['drop', 'discard', 'trash']:
@@ -147,7 +151,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     return None
                 trg_name = ' '.join(cmd_tokens[2:])
                 try:
-                    self.adventure.current_room.drop(self.console, player, trg_name)
+                    self.adventure.current_room.drop(player, trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
             elif cmd_tokens[1] in ['equip', 'use']:

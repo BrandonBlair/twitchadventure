@@ -15,7 +15,7 @@ class DeepDungeon(Campaign):
         }
 
         self.rooms = {
-            'dank_cell': Room(**dank_cell)
+            'dank_cell': Room(self.console, **dank_cell)
         }
 
         self.current_room = self.rooms['dank_cell']

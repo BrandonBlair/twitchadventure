@@ -4,6 +4,7 @@ from game.adventure.exceptions import (
     ItemNotEquippableError,
     ItemNotEquippedError,
 )
+from game.adventure import dice
 
 
 class Character(Asset):
@@ -14,7 +15,9 @@ class Character(Asset):
         self.race = race
         self.is_player = is_player
         self.equippable_types = ['weapon', 'armor']
+        self.in_combat = False
 
+        self.initiative = 0
         self.strength = strength
         self.max_health = max_health
         self.health = self.max_health
@@ -35,6 +38,14 @@ class Character(Asset):
 
     def give_item(self, item):
         self.inventory.append(item)
+
+    def roll_initiative(self):
+        intv_roll = dice.roll_d20()
+        intv = self.agility + intv_roll
+        self.console.chat(
+            f"{self.name} rolls for initiative, and after modifying for agility has a {intv_roll}."
+        )
+        self.initiative = intv
 
     def remove_item(self, name=None, obj=None):
         """Removes an item from the player's inventory and unequips it if necessary."""
@@ -154,3 +165,14 @@ class Character(Asset):
             weap_str = self.equipped_weapon.strength
         dmg = weap_str + self.strength
         return dmg
+
+    def start_combat(self):
+        self.console.chat(f"{self.name} has entered combat!")
+        self.roll_initiative()
+        self.in_combat = True
+        return None
+
+    def end_combat(self):
+        self.console.chat(f"{self.name} is no longer in combat.")
+        self.in_combat = False
+        return None

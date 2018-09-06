@@ -18,10 +18,15 @@ class Campaign(Asset):
     def header(self):
         return f"* {self.name} - {self.current_room.name} *"
 
-    def add_character(self, console, name, race):
+    def add_character(self, name, race):
         if name in self.adventurers:
             raise PlayerExistsInCampaignError()
-        new_char = Character(console=console, name=name, race=race, is_player=True)
+        new_char = Character(
+            console=self.console,
+            name=name,
+            race=race,
+            is_player=True
+        )
         self.adventurers[name] = new_char
         self.current_room.add_character(new_char)
         return None
