@@ -117,6 +117,9 @@ class Room(object):
                 self.console.chat(
                     f"{attacker.name} loots {', '.join(defender.inventory)} and {defender.gold} gold from {defender.name}'s corpse.")
 
+                # Experience
+                
+
                 self.unaggro_character(defender)
 
 
@@ -152,7 +155,10 @@ class Room(object):
         return None
 
     def drop(self, player, item_name):
-        kw = {'item_name': item_name}
+        kw = {
+            'player': player,
+            'item_name': item_name,
+        }
         self.queue_action(player, self._drop, f_kwargs=kw)
         return None
 
@@ -162,6 +168,7 @@ class Room(object):
 
         self.inventory.append(item)
         player.remove_item(obj=item)
+        item.required_perception = 0  # Item is now very obvious
         self.console.chat(f"{player.name} drops {item.name}")
         return None
 
@@ -241,16 +248,17 @@ class Room(object):
         )
 
         # Queue opponent actions
-        for opponent in self.aggros[player]:
-            if opponent.initiative not in self.actions[player]:
-                self.actions[player][opponent.initiative] = []
-            kw = {
-                'attacker': opponent,
-                'defender': player,
-            }
-            self.actions[player][opponent.initiative].append(
-                (self._attack, [], kw)
-            )
+        if self.aggros.get(player):
+            for opponent in self.aggros[player]:
+                if opponent.initiative not in self.actions[player]:
+                    self.actions[player][opponent.initiative] = []
+                kw = {
+                    'attacker': opponent,
+                    'defender': player,
+                }
+                self.actions[player][opponent.initiative].append(
+                    (self._attack, [], kw)
+                )
 
         # Trigger ordered actions
         self.process_queued_actions(player)
@@ -263,9 +271,7 @@ class Room(object):
         for initv_nbr in actions_by_highest_initiative:
             for func_tuple in self.actions[player][initv_nbr]:
                 if not player.alive:
-                    continue
+                    return None
                 func, fargs, fkwargs = func_tuple
                 func(*fargs, **fkwargs)  # Execute action
         self.actions[player] = {}
-
-        # Check for end of combat
