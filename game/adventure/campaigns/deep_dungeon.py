@@ -19,4 +19,5 @@ class DeepDungeon(Campaign):
         room_name = procedurally_generated_room.name
         self.rooms[room_name] = procedurally_generated_room
         self.current_room = self.rooms[room_name]
+        print(f"Current room name is {room_name}")
         return None

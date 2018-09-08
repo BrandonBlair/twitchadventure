@@ -54,7 +54,7 @@ class RoomGenerator(object):
         return desc
 
     def gen_name(self, area):
-        name = f"The {title_case(pick(area))}"
+        name = f"The {title_case(area)}"
         return name
 
 def random_room(console):

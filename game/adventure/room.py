@@ -108,8 +108,17 @@ class Room(object):
             defender.health -= dmg_score
             if defender.health < 1:
                 defender.alive = False
-                self.unaggro_character(defender)
                 self.console.chat(f"{defender.name} has been slain!")
+
+                # Looting
+                attacker.inventory += defender.inventory
+                defender.inventory = []
+                attacker.gold += defender.gold
+                self.console.chat(
+                    f"{attacker.name} loots {', '.join(defender.inventory)} and {defender.gold} gold from {defender.name}'s corpse.")
+
+                self.unaggro_character(defender)
+
 
             return None
 

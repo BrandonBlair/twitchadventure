@@ -134,6 +134,8 @@ class Character(Asset):
         for itm in self.inventory:
             entries.append(f"{'*' if itm.equipped else ''} {itm.name} ({itm.strength}) ({itm.category[0]})")
         inv = ', '.join(entries)
+
+        inv = (inv + f" and {self.gold} gold.") if self.gold > 0 else (inv + '.')
         return inv
 
     @property

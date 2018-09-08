@@ -21,7 +21,7 @@ class Console(object):
         self.connection = connection
         self.channel = channel
 
-    def chat(self, txt, wait_secs=2.5):
+    def chat(self, txt, wait_secs=1.5):
         self.connection.privmsg(self.channel, txt)
         sleep(wait_secs)
 
