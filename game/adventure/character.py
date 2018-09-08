@@ -9,7 +9,7 @@ from game.adventure import dice
 
 class Character(Asset):
 
-    def __init__(self, console, name, race, is_player=False, strength=1, max_health=100, gold=0, perception=1, agility=1, armor_class=1, alive=True):
+    def __init__(self, console, name, race, is_player=False, strength=1, max_health=100, gold=0, perception=1, agility=1, alive=True):
         self.console = console
         self.name = name
         self.race = race

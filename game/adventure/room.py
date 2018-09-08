@@ -111,9 +111,6 @@ class Room(object):
                 self.unaggro_character(defender)
                 self.console.chat(f"{defender.name} has been slain!")
 
-                if len(self.aggros[attacker]) == 0:
-                    attacker.end_combat()
-
             return None
 
         self.console.chat(f"...and misses!")
@@ -256,6 +253,8 @@ class Room(object):
         )
         for initv_nbr in actions_by_highest_initiative:
             for func_tuple in self.actions[player][initv_nbr]:
+                if not player.alive:
+                    continue
                 func, fargs, fkwargs = func_tuple
                 func(*fargs, **fkwargs)  # Execute action
         self.actions[player] = {}

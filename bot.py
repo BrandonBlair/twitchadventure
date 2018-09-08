@@ -14,6 +14,7 @@ from time import time, sleep
 from game.escape.cabin.mysterious_cabin import CabinMystery
 from game.adventure.campaigns.deep_dungeon import DeepDungeon
 from game.adventure.races import races
+from game.adventure.generators.loot import random_loot
 
 class Console(object):
     def __init__(self, connection, channel):
@@ -102,27 +103,41 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
             print("Length of cmd tokens {}".format(len(cmd_tokens)))
             twitch_user = e.source.split('@')[0].split('!')[1]  # Derive user from myname!myname@twitch.tmi.com
             if twitch_user in self.adventure.adventurers:
-                pass
+                player = self.adventure.adventurers.get(twitch_user)
             else:
                 race = random.choice(races)
                 self.adventure.add_character(name=twitch_user, race=race)
-                msg = f"{twitch_user} has joined the adventure! They will be playing {twitch_user} the {race}"
+                player = self.adventure.adventurers.get(twitch_user)
+                player.inventory = [random_loot()]
+
+                msg = f"{twitch_user} has joined the adventure! They will be playing {twitch_user} the {race}. Try !rp help for guidance!"
                 c.privmsg(self.channel, msg)
-            player = self.adventure.adventurers.get(twitch_user)
+
+
+
+            # Player is dead
             if not player.alive:
                 self.console.chat(f"{player.name} is dead.")
                 return None
+
+            # Describe Room
             if len(cmd_tokens) == 1:
                 self.console.chat(self.adventure.current_room.full_desc)
+
+            # Show Player Inventory
             elif cmd_tokens[1] == "inventory":
                 inv = player.show_inventory()
                 if not inv:
                     self.console.chat(f"{player.name} has nothing in their inventory.")
                     return None
                 self.console.chat(f"{player.name} is carrying {inv}")
+
+            # Search Room
             elif cmd_tokens[1] in ['search', 'look', 'investigate']:
                 self.adventure.current_room.search(player)
                 return None
+
+            # Attack
             elif cmd_tokens[1] in ["attack", 'kill', 'assault']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify a target to attack.")
@@ -136,6 +151,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     )
                 except Exception as e:
                     self.console.chat(str(e))
+
+            # Take an item from the room
             elif cmd_tokens[1] in ['get', 'take', 'retrieve', 'grab']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify what you want to take.")
@@ -145,6 +162,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.adventure.current_room.take(player, trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
+
+            # Drop an item into the room
             elif cmd_tokens[1] in ['drop', 'discard', 'trash']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify what you want to drop.")
@@ -154,6 +173,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     self.adventure.current_room.drop(player, trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
+
+            # Equip an item
+
             elif cmd_tokens[1] in ['equip', 'use']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify what you want to equip.")
@@ -163,6 +185,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     player.equip_item(trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
+
+            # Unequip an item
             elif cmd_tokens[1] in ['unequip']:
                 if len(cmd_tokens) < 3:
                     self.console.chat(f"{player.name} please specify what you want to unequip.")
@@ -172,12 +196,21 @@ class TwitchBot(irc.bot.SingleServerIRCBot):
                     player.unequip_item(trg_name)
                 except Exception as e:
                     self.console.chat(str(e))
+
+            # List all commands
             elif cmd_tokens[1] in ['help', 'commands', 'controls', 'manual']:
                 self.console.chat(
                     'Commands include: inventory, search, take, equip, unequip, drop, attack'
                 )
-            return None
 
+            if player.in_combat and len(self.adventure.current_room.aggros[player]) == 0:
+                player.end_combat()
+                self.console.chat(
+                    f"{self.adventure.current_room.name} is secure. Moving to the next area..."
+                )
+                self.adventure.next_room()
+                self.console.chat(self.adventure.current_room.full_desc)
+            return None
 
 
         elif cmd == "schedule":
